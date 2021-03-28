@@ -10,26 +10,14 @@ print_help()
   echo ""
 }
 
-remove_char()
-{
-  str=${1::$((${#1} - ${2}))}
-}
-
 COMMAND=""
-LOG_FILES=""
-GZ_LOG_FILES=""
 
-DATETIMEa=""
-DATETIMEb="9999-99-99"
+AFTER="0000-00-00 00:00:00"
+BEFORE="9999-99-99 99:99:99"
 
 TICKER=""
-TICKERtmp=""
+OUTPUT=""
 WIDTH=""
-
-if [ "$#" -eq 0 ]; then
-  echo "error"
-  exit 1
-fi
 
 if [ "$1" = "--help" ]; then
   print_help
@@ -38,19 +26,27 @@ fi
 
 
 WIDTH_CHECK=1
+GETPOPTS_CHECK=""
 while getopts "a:b:t:w:h" args; do
+  GETPOPTS_CHECK=" "
   case "$args" in
     a)
-      DATETIMEa="$OPTARG"
+      AFTER="$OPTARG"
     ;;
     b)
-      DATETIMEb="$OPTARG"
+      BEFORE="$OPTARG"
     ;;
     t)
-      TICKERtmp="$TICKERtmp$OPTARG\|"
+      TICKER="$TICKER$OPTARG;"
     ;;
     w)
-      WIDTH="$OPTARG"
+      if [ "$WIDTH_CHECK" -eq 1 ]; then
+        WIDTH="$OPTARG"
+        WIDTH_CHECK=0
+      else
+        echo "moc width"
+      exit 1
+      fi
     ;;
     h)
       print_help
@@ -61,7 +57,7 @@ while getopts "a:b:t:w:h" args; do
       exit 1
     ;;
     : )
-      echo "adadas"
+      echo "Ocekavame soubory na stdin"
     ;;
     *)
       echo "ada"
@@ -70,79 +66,61 @@ while getopts "a:b:t:w:h" args; do
   esac
 done
 
-echo "$TICKERtmp"
-
-if [ "$TICKERtmp" != "" ] ; then
-  echo "deje"
-  TICKER=$(echo -n $TICKERtmp | head -c -2)
-fi
-
-echo "Adda$TICKERtmp   dad"
-echo "$TICKER cusik"
-
 #COMMAND FILTRATION
 shift $((OPTIND-1))
-COMMAND=$1
-echo "adsad $COMMAND"
-echo "$@"
 
-#NOT COMMAND -> PRINT FILE(S)
-if [ -f "$COMMAND" ]; then
-  echo "1"
-  for file in "$@"; do
-    echo "$file"
-    if [ "${file##*.}" = "gz" ] && [ "$TICKER" = "" ]; then
-      echo "2"
-      gzip -c -d "${file}"
-    elif [ "${file##*.}" = "log" ] && [ "$TICKER" = "" ]; then
-      echo "3"
-      cat "$file"
-    elif [ "${file##*.}" = "gz" ] && [ "$TICKER" != "" ]; then
-      echo "4"
-      gzip -c -d "${file}" | grep -w "$TICKER"
-    elif [ "${file##*.}" = "log" ] && [ "$TICKER" != "" ]; then
-      echo "5"
-      cat "$file" | grep -w "$TICKER"
-    fi
-  done
-  exit 0
-fi
-
-for file in $# ; do
-  if [ "$file" = \*.gz ]; then
-    GZ_LOG_FILES="GZ_LOG_FILES${file} "
-  elif [ -f "$file" ] && [ "$file" != \*.gz ]; then
-    LOG_FILES="LOG_FILES${file} "
+#FILE(S) SAVED TO VARIABLE
+counter=1
+for file in "$@"; do
+  if [ ! -f "$file" ] && [ "$counter" -eq 1 ]; then
+    COMMAND="$file"
   fi
+  if [ "${file##*.}" = "gz" ]; then
+    OUTPUT=$(echo)"${OUTPUT}"$(zcat "$file")
+  fi
+  if [ "${file##*.}" = "log" ]; then
+    OUTPUT=$(echo)"${OUTPUT}"$(cat "$file")
+  fi
+  if [ $counter -ne $# ] && [ -f "$file" ]; then
+    OUTPUT="${OUTPUT}\n"
+  fi
+  counter=$((counter+1))
 done
 
-echo "$LOG_FILES"
-
-if [ "$GZ_LOG_FILES" != "" ] && [ "$LOG_FILES" = "" ]; then
-  read_input="zcat $GZ_LOG_FILES"
+#AFTER IS SET
+if [ "$AFTER" != "" ]; then
+  OUTPUT=$(echo "$OUTPUT" |  awk -F ';' -v AFTER="$AFTER" '{if ($1 > AFTER) {print}}')
 fi
 
-if [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" != "" ]; then
-  read_input="cat $LOG_FILES"
+#BEFORE IS SET
+if [ "$BEFORE" != "" ]; then
+  OUTPUT=$(echo "$OUTPUT" |  awk -F ';' -v BEFORE="$BEFORE" '{if ($1 < BEFORE) {print}}')
 fi
 
-if [ "$GZ_LOG_FILES" != "" ] && [ "$LOG_FILES" != "" ]; then
-  read_input="cat ${LOG_FILES}| zcat ${GZ_LOG_FILES}"
+#TICKER IS SET
+if [ "$TICKER" != "" ]; then
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TICKER="$TICKER" 'BEGIN{n = split(TICKER, tic)} {for(i = 1; i <= n; i++) if($2 == tic[i]) print}')
 fi
 
-echo "$dasdas read_input"
+#WIDTH IS SET
+if [ "$WIDTH" != "" ]; then
+  echp "TO DO"
+  OUTPUT=$(echo "$OUTPUT" |  awk -F ';' -v AFTER="$AFTER" '{if ($1 > AFTER) {print}}')
+fi
 
 if [ "$COMMAND" = "list-tick" ]; then
-  cat  | awk -F';' '{print $2}' | grep -w "$TICKER" | sort -u
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' '{print $2}' | sort -u)
 fi
 
+if [ "$COMMAND" = "profit" ]; then
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' '{ if($3 == "sell") { temp+=$4*$6 } else { temp-=$4*$6 } } END {printf("%.2f", temp)}')
+fi
+
+if [ "$COMMAND" = "last-price" ]; then
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' '!seen[$2]++')
+  #| awk -F ';' '{a[i++]=$0} END {for (j=i-1; j>=0;) print a[j--] }'
+fi
+
+echo "$OUTPUT"
+
 exit 0
-
-
-
-
-
-
-
-
-
