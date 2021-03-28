@@ -1,0 +1,137 @@
+#!/bin/bash
+
+export POSIXLY_CORRECT=yes
+export LC_NUMERIC=en_US.UTF-8
+
+print_help()
+{
+  echo "Usage: tradelog [-h|--help]"
+  echo "       tradelog [FILTER...] [COMMAND] [LOG...]"
+  echo ""
+}
+
+remove_char()
+{
+  str=${1::$((${#1} - ${2}))}
+}
+
+COMMAND=""
+LOG_FILES=""
+GZ_LOG_FILES=""
+
+DATETIMEa=""
+DATETIMEb="9999-99-99"
+
+TICKER=""
+WIDTH=""
+
+if [ "$#" -eq 0 ]; then
+  echo "error"
+  exit 1
+fi
+
+WIDTH_CHECK=1
+while getopts "a:b:t:w:h" args; do
+  case "$args" in
+    a)
+      DATETIMEa="$OPTARG"
+    ;;
+    b)
+      DATETIMEb="$OPTARG"
+    ;;
+    t)
+      TICKER="$TICKER$OPTARG\|"
+    ;;
+    w)
+      WIDTH="$OPTARG"
+    ;;
+    h)
+      print_help
+      exit 0
+    ;;
+    -help)
+      print_help
+      exit 0
+    ;;
+    \?)
+      echo "Spatny prepinac"
+      exit 1
+    ;;
+    : )
+      echo "adadas"
+    ;;
+    *)
+      echo "ada"
+      exit 1
+    ;;
+  esac
+done
+
+echo "$TICKER"
+
+if [ "$TICKER" != "" ] ; then
+  echo "deje"
+  TICKERtmp=$(echo -n $TICKER | head -c -2)
+fi
+
+echo "Adda    $TICKERtmp"
+
+#COMMAND FILTRATION
+#shift
+COMMAND=$1
+echo "$@"
+
+#NOT COMMAND -> PRINT FILE(S)
+if [ -f "$COMMAND" ]; then
+  for file in "$@"; do
+    if [[ "$file" = *.gz && -z "$TICKER" ]]; then
+      gzip -c -d "${file}"
+    elif [[ -z "$TICKER" ]]; then
+      cat "$file"
+    elif [[ "$file" = *.gz && -n "$TICKER" ]]; then
+      gzip -c -d "${file}" | grep -w "$TICKER"
+    else
+      cat "${file}" | grep -w "$TICKER"
+    fi
+  done
+  exit 0
+fi
+
+for file in $# ; do
+  if [[ "$file" == *.gz ]]; then
+    GZ_LOG_FILES="GZ_LOG_FILES${file} "
+  elif [[ -f "$file" && "$file" != *.gz ]]; then
+    LOG_FILES="LOG_FILES${file} "
+  fi
+done
+
+echo "$LOG_FILES"
+
+if [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" != "" ]; then
+  read_input="zcat $GZ_LOG_FILES"
+fi
+
+if [ "$GZ_LOG_FILES" != "" ] && [ "$LOG_FILES" = "" ]; then
+  read_input="cat $LOG_FILES"
+fi
+
+if [ "$GZ_LOG_FILES" != "" ] && [ "$LOG_FILES" != "" ]; then
+  read_input="cat ${LOG_FILES}| zcat ${GZ_LOG_FILES}"
+fi
+
+echo "$read_input"
+
+if [ "$COMMAND" = "list-tick" ]; then
+  $read_input | awk -F';' '{print $2}' | grep -w "$TICKER" | sort -u
+fi
+
+exit 0
+
+
+
+
+
+
+
+
+
