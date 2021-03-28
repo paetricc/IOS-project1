@@ -23,6 +23,7 @@ DATETIMEa=""
 DATETIMEb="9999-99-99"
 
 TICKER=""
+TICKERtmp=""
 WIDTH=""
 
 if [ "$#" -eq 0 ]; then
@@ -46,7 +47,7 @@ while getopts "a:b:t:w:h" args; do
       DATETIMEb="$OPTARG"
     ;;
     t)
-      TICKER="$TICKER$OPTARG\|"
+      TICKERtmp="$TICKERtmp$OPTARG\|"
     ;;
     w)
       WIDTH="$OPTARG"
@@ -69,51 +70,59 @@ while getopts "a:b:t:w:h" args; do
   esac
 done
 
-echo "$TICKER"
+echo "$TICKERtmp"
 
-if [ "$TICKER" != "" ] ; then
+if [ "$TICKERtmp" != "" ] ; then
   echo "deje"
-  TICKERtmp=$(echo -n $TICKER | head -c -2)
+  TICKER=$(echo -n $TICKERtmp | head -c -2)
 fi
 
-echo "Adda    $TICKERtmp"
+echo "Adda$TICKERtmp   dad"
+echo "$TICKER cusik"
 
 #COMMAND FILTRATION
-#shift
+shift $((OPTIND-1))
 COMMAND=$1
+echo "adsad $COMMAND"
 echo "$@"
 
 #NOT COMMAND -> PRINT FILE(S)
 if [ -f "$COMMAND" ]; then
+  echo "1"
   for file in "$@"; do
-    if [[ "$file" = *.gz && -z "$TICKER" ]]; then
+    echo "$file"
+    if [ "${file##*.}" = "gz" ] && [ "$TICKER" = "" ]; then
+      echo "2"
       gzip -c -d "${file}"
-    elif [[ -z "$TICKER" ]]; then
+    elif [ "${file##*.}" = "log" ] && [ "$TICKER" = "" ]; then
+      echo "3"
       cat "$file"
-    elif [[ "$file" = *.gz && -n "$TICKER" ]]; then
+    elif [ "${file##*.}" = "gz" ] && [ "$TICKER" != "" ]; then
+      echo "4"
       gzip -c -d "${file}" | grep -w "$TICKER"
-    else
-      cat "${file}" | grep -w "$TICKER"
+    elif [ "${file##*.}" = "log" ] && [ "$TICKER" != "" ]; then
+      echo "5"
+      cat "$file" | grep -w "$TICKER"
     fi
   done
   exit 0
 fi
 
 for file in $# ; do
-  if [[ "$file" == *.gz ]]; then
+  if [ "$file" = \*.gz ]; then
     GZ_LOG_FILES="GZ_LOG_FILES${file} "
-  elif [[ -f "$file" && "$file" != *.gz ]]; then
+  elif [ -f "$file" ] && [ "$file" != \*.gz ]; then
     LOG_FILES="LOG_FILES${file} "
   fi
 done
 
 echo "$LOG_FILES"
 
-if [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" != "" ]; then
+if [ "$GZ_LOG_FILES" != "" ] && [ "$LOG_FILES" = "" ]; then
   read_input="zcat $GZ_LOG_FILES"
 fi
 
-if [ "$GZ_LOG_FILES" != "" ] && [ "$LOG_FILES" = "" ]; then
+if [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" != "" ]; then
   read_input="cat $LOG_FILES"
 fi
 
@@ -121,10 +130,10 @@ if [ "$GZ_LOG_FILES" != "" ] && [ "$LOG_FILES" != "" ]; then
   read_input="cat ${LOG_FILES}| zcat ${GZ_LOG_FILES}"
 fi
 
-echo "$read_input"
+echo "$dasdas read_input"
 
 if [ "$COMMAND" = "list-tick" ]; then
-  $read_input | awk -F';' '{print $2}' | grep -w "$TICKER" | sort -u
+  cat  | awk -F';' '{print $2}' | grep -w "$TICKER" | sort -u
 fi
 
 exit 0
