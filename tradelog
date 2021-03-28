@@ -30,6 +30,12 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
+if [ "$1" = "--help" ]; then
+  print_help
+  exit 0
+fi
+
+
 WIDTH_CHECK=1
 while getopts "a:b:t:w:h" args; do
   case "$args" in
@@ -46,10 +52,6 @@ while getopts "a:b:t:w:h" args; do
       WIDTH="$OPTARG"
     ;;
     h)
-      print_help
-      exit 0
-    ;;
-    -help)
       print_help
       exit 0
     ;;
