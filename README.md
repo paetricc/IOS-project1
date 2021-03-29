@@ -314,3 +314,7 @@ Příklady:
 
 Built with [Pandoc](https://www.pandoc.org) using [pandoc-bootstrap](https://github.com/ashki23/pandoc-bootstrap) theme  
 
+<<<<<<< HEAD
+=======
+/\* Bootstrap styles to tables \*/ function bootstrapStylePandocTables() { $('tr.header').parent('thead').parent('table').addClass('table table-condensed'); } $(document).ready(function () { bootstrapStylePandocTables(); }); /\* Adjust the height when click the toc \*/ var shiftWindow = function() { scrollBy(0, -60) }; window.addEventListener("hashchange", shiftWindow); function load() { if (window.location.hash) shiftWindow(); }
+>>>>>>> 5a92ab9b874fc809c17b9798fe54b3ef47678d59

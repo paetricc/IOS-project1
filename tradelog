@@ -127,6 +127,14 @@ if [ "$COMMAND" = "pos" ]; then
   exit 0
 fi
 
+if [ "$COMMAND" = "graph-pos" ]; then
+  echo "WORK IN PROGRESS"
+fi
+
+if [ "$COMMAND" = "hist-ord" ]; then
+  echo "WORK IN PROGRESS"
+fi
+
 echo "$OUTPUT"
 
 exit 0
