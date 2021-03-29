@@ -3,6 +3,17 @@
 1\. Úloha IOS (2021)
 ====================
 
+*   *   [Popis úlohy](#popis-úlohy)
+    *   [Zjednodušený úvod do problematiky](#zjednodušený-úvod-do-problematiky)
+    *   [Specifikace rozhraní skriptu](#specifikace-rozhraní-skriptu)
+    *   [Popis](#popis)
+    *   [Podrobné požadavky](#podrobné-požadavky)
+    *   [Návratová hodnota](#návratová-hodnota)
+    *   [Implementační detaily](#implementační-detaily)
+    *   [Odevzdání projektu](#odevzdání-projektu)
+    *   [Rady](#rady)
+    *   [Příklady použití](#příklady-použití)
+
 Popis úlohy
 ===========
 
@@ -136,17 +147,6 @@ Příklady použití
 ================
 
 *   Ukázky záznamů nástroje pro obchodování na burze jsou dostupné zde: [https://pajda.fit.vutbr.cz/ios/ios-21-1-logs](https://pajda.fit.vutbr.cz/ios/ios-21-1-logs)
-
-*   *   [Popis úlohy](#popis-úlohy)
-    *   [Zjednodušený úvod do problematiky](#zjednodušený-úvod-do-problematiky)
-    *   [Specifikace rozhraní skriptu](#specifikace-rozhraní-skriptu)
-    *   [Popis](#popis)
-    *   [Podrobné požadavky](#podrobné-požadavky)
-    *   [Návratová hodnota](#návratová-hodnota)
-    *   [Implementační detaily](#implementační-detaily)
-    *   [Odevzdání projektu](#odevzdání-projektu)
-    *   [Rady](#rady)
-    *   [Příklady použití](#příklady-použití)
 
 Příklady:
 
