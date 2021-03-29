@@ -100,17 +100,6 @@ Podrobné požadavky
     
 14.  Při výpisu pomocí příkazů `pos`, `last-price`, `hist-ord` a `graph-pos` musí být tickery zarovnány doleva a dvojtečka na 11. pozici na řádku (výplň proveďte pomocí mezer). U příkazů `hist-ord` a `graph-pos` je za dvojtečkou na všech řádcích právě jedna mezera (případně žádná, pokud v pravém sloupci daného řádku nic není), u příkazů `pos` a `last-price` jsou hodnoty v pravé části výpisu formátovány tak, aby (v případě neprázdného výpisu) byla na řádku s nejdelší řetězcovou reprezentací hodnoty (tj. včetně znaménka) mezi dvojtečkou a hodnotou právě jedna mezera a ostatní řádky byly zarovnány doprava vzhledem k délce tohoto řádku (vizte příklady výpisů níže).
 
-*   *   [Popis úlohy](#popis-úlohy)
-    *   [Zjednodušený úvod do problematiky](#zjednodušený-úvod-do-problematiky)
-    *   [Specifikace rozhraní skriptu](#specifikace-rozhraní-skriptu)
-    *   [Popis](#popis)
-    *   [Podrobné požadavky](#podrobné-požadavky)
-    *   [Návratová hodnota](#návratová-hodnota)
-    *   [Implementační detaily](#implementační-detaily)
-    *   [Odevzdání projektu](#odevzdání-projektu)
-    *   [Rady](#rady)
-    *   [Příklady použití](#příklady-použití)
-
 Návratová hodnota
 =================
 
@@ -147,6 +136,17 @@ Příklady použití
 ================
 
 *   Ukázky záznamů nástroje pro obchodování na burze jsou dostupné zde: [https://pajda.fit.vutbr.cz/ios/ios-21-1-logs](https://pajda.fit.vutbr.cz/ios/ios-21-1-logs)
+
+*   *   [Popis úlohy](#popis-úlohy)
+    *   [Zjednodušený úvod do problematiky](#zjednodušený-úvod-do-problematiky)
+    *   [Specifikace rozhraní skriptu](#specifikace-rozhraní-skriptu)
+    *   [Popis](#popis)
+    *   [Podrobné požadavky](#podrobné-požadavky)
+    *   [Návratová hodnota](#návratová-hodnota)
+    *   [Implementační detaily](#implementační-detaily)
+    *   [Odevzdání projektu](#odevzdání-projektu)
+    *   [Rady](#rady)
+    *   [Příklady použití](#příklady-použití)
 
 Příklady:
 
