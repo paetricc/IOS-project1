@@ -1,13 +1,37 @@
-#!/bin/bash
+#!/bin/sh
 
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 
+# IOS Projekt 1
+# Autor: Tomas Bartu (xbartu11)
+
 print_help()
 {
-  echo "Usage: tradelog [-h|--help]"
-  echo "       tradelog [FILTER...] [COMMAND] [LOG...]"
+  echo "NAME"
+  echo "      tradelog - analyzer of logs from stock exchange trading"
   echo ""
+  echo "SYNOPSIS"
+  echo "      tradelog [-h|--help] [FILTR] [COMMAND] [LOG [LOG2 [...]]"
+  echo ""
+  echo "COMMAND"
+  echo "      list-tick         Listing of occurring stock exchange symbols \"tickers\""
+  echo "      profit            Listing profit from all closed trades"
+  echo "      pos               Listing of current hold position sorted in descending order by value"
+  echo "      last-price        Listing of last known price for each ticker"
+  echo "      hist-ord          Histogram report of the number of transactions according to the ticker"
+  echo "      graph-pos         Statement of the graph of values of held positions according to the ticker"
+  echo ""
+  echo "FILTER:"
+  echo "      -a DATETIME       After: only records after this date are considered (without this date). DATETIME is in the format YYYY-MM-DD HH:MM:SS"
+  echo "      -b DATETIME       Before: only records BEFORE this date are considered (without this date)"
+  echo "      -t TICKER         Only entries corresponding to a given ticker are considered. With multiple occurrences of the switch, the set of all listed ticker is taken"
+  echo "      -w WIDTH          In the list of graphs, sets their width, in the length of the longest line to WIDTH. This, WIDTH must be a positive integer. Multiple occurrences of the switch is a faulty start."
+  echo "ARGUMENTS"
+  echo "      -h | --h          Print help"
+  echo ""
+  echo "AUTHOR"
+  echo "      Written by Tomas Bartu(xbartu11)."
 }
 
 COMMAND=""
@@ -28,9 +52,7 @@ if [ "$1" = "--help" ]; then
 fi
 
 WIDTH_CHECK=1
-GETOPTS_CHECK=""
-while getopts "a:b:t:w:h" args; do
-  GETOPTS_CHECK=" "
+while getopts ":a:b:t:w:h" args; do
   case "$args" in
     a)
       AFTER="$OPTARG"
@@ -46,7 +68,7 @@ while getopts "a:b:t:w:h" args; do
         WIDTH="$OPTARG"
         WIDTH_CHECK=0
       else
-        echo "moc width"
+        echo "SWITCH -w IS USED MORE THAN ONCE"
       exit 1
       fi
     ;;
@@ -55,14 +77,15 @@ while getopts "a:b:t:w:h" args; do
       exit 0
     ;;
     \?)
-      echo "Spatny prepinac"
+      echo "WRONG SWITCH. TYPE -h OR --help."
       exit 1
     ;;
     :)
-      echo "Ocekavame soubory na stdin"
+      echo "EXPECTED STDIN"
+      exit 1
     ;;
     *)
-      echo "ada"
+      echo "UNEXPECTED ERROR"
       exit 1
     ;;
   esac
@@ -71,7 +94,7 @@ done
 #COMMAND FILTRATION
 shift $((OPTIND-1))
 
-#FILE(S) SAVED TO VARIABLE
+#FILE(S) NAME SAVED TO VARIABLE
 counter=1
 for file in "$@"; do
   if [ ! -f "$file" ] && [ "$counter" -eq 1 ]; then
@@ -89,6 +112,7 @@ for file in "$@"; do
   counter=$((counter+1))
 done
 
+#SAVE OUTPUT OF FILE(S) TO VARIABLE
 if [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" = "" ]; then
   OUTPUT=$(cat)
 elif [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" != "" ]; then
@@ -119,129 +143,74 @@ if [ "$WIDTH" = "" ]; then
   fi
 fi
 
+#LIST-TICK IS SET
 if [ "$COMMAND" = "list-tick" ]; then
   OUTPUT=$(echo "$OUTPUT" | awk -F ';' '{print $2}' | sort -u)
 fi
 
+#PROFIT IS SET
 if [ "$COMMAND" = "profit" ]; then
-  OUTPUT=$(echo "$OUTPUT" | awk -F ';' '{ if($3 == "sell") { temp+=$4*$6 } else { temp-=$4*$6 } } END {printf("%.2f", temp)}')
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' '{ (($3 == "sell") ? temp+=$4*$6 : temp-=$4*$6 ) } END {printf("%.2f", temp)}')
 fi
 
+#LAST-PRICE IS SET
 if [ "$COMMAND" = "last-price" ]; then
   OUTPUT=$(echo "$OUTPUT" | sort -n -r -k1,1 | awk -F ';' '!seen[$2]++' | awk -F ';' 'BEGIN{i=1} { tmp[i]=$2; a[i++]=$4} END { max = 0; for ( i in a ){ len=length(a[i]); if (len > max) { max = len } } ; for(i in a){ printf("%-10s: %*.2f\n", tmp[i], max, a[i]) }   }' | sort -k1,1)
 fi
 
+#POS IS SET
 if [ "$COMMAND" = "pos" ]; then
   TEMP=$(echo "$OUTPUT" | awk -F ';' '{print $2}' | sort -u | awk '{var=var";"$1} END { var=substr(var,2) ;print var}')
-  OUTPUT=$(echo "$OUTPUT" | sort -n -k1,1 | awk -F ';' -v TEMP="$TEMP" 'BEGIN{split(TEMP, tmp)} {for(i in tmp) { if($2 == tmp[i]){ if($3 == "buy") { sum[i]+=$6 } else { sum[i]-=$6 } a[i]=$4 } } }
-  END{
-  for(i in tmp) {
-    b[i]=sprintf("%.2f", sum[i]*a[i]);
-  }
+  OUTPUT=$(echo "$OUTPUT" | sort -n -k1,1 | awk -F ';' -v TEMP="$TEMP" 'BEGIN{split(TEMP, tmp)} {for(i in tmp) { if($2 == tmp[i]){ (($3 == "buy") ? sum[i]+=$6 : sum[i]-=$6 ); a[i]=$4 } } } END{
+  for(i in tmp) b[i]=sprintf("%.2f", sum[i]*a[i]);
   for (i in b){
-    if (length(b[i]) > max) {
-      max = length(b[i]);
-    }
-  }
-  for( i in a ){
-    printf("%-10s: %*.2f\n", tmp[i], max, b[i]);
-  }
-}' | sort -r -n -t ':' -k2)
+    if (length(b[i]) > max) { max = length(b[i]); } }
+  for( i in a ) printf("%-10s: %*.2f\n", tmp[i], max, b[i]); }' | sort -r -n -t ':' -k2)
 fi
 
+#GRAPH-POS IS SET
 if [ "$COMMAND" = "graph-pos" ]; then
   TEMP=$(echo "$OUTPUT" | awk -F ';' '{print $2}' | sort -u | awk '{var=var";"$1} END { var=substr(var,2) ;print var}')
-  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TEMP="$TEMP" -v width="$WIDTH" 'BEGIN{split(TEMP, tmp)} {for(i in tmp) { if( $2 == tmp[i] ) if($2 == tmp[i]){ if($3 == "buy") { sum[i]+=$6 } else { sum[i]-=$6 } a[i]=$4 } } }
-  END{
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TEMP="$TEMP" -v width="$WIDTH" 'BEGIN{split(TEMP, tmp); max = 0} {for(i in tmp) { if( $2 == tmp[i] ) if($2 == tmp[i]){ (($3 == "buy") ? sum[i]+=$6 : sum[i]-=$6 ); a[i]=$4 } } } END{
   for(i in tmp) {
-    if( (sum[i] * a[i]) < 0 ) {
-        absol[i] = sum[i] * a[i] * (-1.0f);
-      } else {
-        absol[i] = sum[i] *a [i];
-      }
-    }
-    max = 0;
-    for ( i in absol ){
-      if (absol[i] > max ) {
-        max = absol[i];
-      }
-    }
-    for ( i in absol ) {
-      printf("%-10s:", tmp[i] )
+    abs[i] = ((sum[i] * a[i]) < 0 ? ( sum[i] * a[i] * (-1.0f) ) : ( sum[i] *a [i] ) ); }
+    for ( i in abs ){
+      if (abs[i] > max ) { max = abs[i] } }
+    for ( i in abs ) { printf("%-10s:", tmp[i] )
       if((sum[i] * a[i])<0) {
         if ( width != "" ) {
-          if( absol[i] == max ) {
-            count=width;
-            printf(" ");
-          } else {
-            count=int(absol[i]/(max/width));
-            if( count != 0 ) {
-              printf(" ");
-            }
-          }
-        } else {
-          count=int(absol[i]/1000);
-          if( count != 0 ) {
-              printf(" ");
-            }
-        }
-        while ( count != 0 ) {
-          printf("!");
-          count-=1;
-        }
-      }
+          if( abs[i] == max ) { count=width; printf(" ") }
+          else { count=int(abs[i]/(max/width));
+            if( count != 0 ) { printf(" "); } } }
+        else { count=int(abs[i]/1000);
+          if( count != 0 ) { printf(" "); } }
+        while ( count != 0 ) { printf("!"); count-=1 } }
       if((sum[i] * a[i])>0) {
         if ( width != "" ) {
-          if( absol[i] == max ) {
-            count=width;
-            printf(" ");
-          } else {
-            count=int(absol[i]/(max/width));
-            if( count != 0 ) {
-              printf(" ");
-            }
-          }
-        } else {
-          count=int(absol[i]/1000);
-          if( count != 0 ) {
-              printf(" ");
-            }
-        }
-        while ( count != 0 ) {
-          printf("#");
-          count-=1;
-        }
-      }
-      printf("\n");
-    }
-  }')
+          if( abs[i] == max ) { count=width; printf(" ") }
+          else { count=int(abs[i]/(max/width));
+            if( count != 0 ) { printf(" "); } } }
+        else { count=int(abs[i]/1000);
+          if( count != 0 ) { printf(" ") } }
+        while ( count != 0 ) { printf("#"); count-=1 } }
+      printf("\n"); } } ')
 fi
 
+#HIST-ORD IS SET
 if [ "$COMMAND" = "hist-ord" ]; then
   TEMP=$(echo "$OUTPUT" | awk -F ';' '{print $2}' | sort -u | awk '{var=var";"$1} END { var=substr(var,2) ;print var}')
-  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TEMP="$TEMP" -v width="$WIDTH" 'BEGIN{split(TEMP, tmp)} { for ( i in tmp ) { if( $2 == tmp[i] ) { a[i]+=1} } }
-  END{
-    max = 0;
-    for ( i in a ){
-      if (a[i] > max) {
-        max = a[i];
-      }
-    }
-    if(width == 0) {
-      width = max;
-    }
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TEMP="$TEMP" -v width="$WIDTH" 'BEGIN{split(TEMP, tmp); max = 0} { for ( i in tmp ) { if( $2 == tmp[i] ) { a[i]+=1} } } END{
+    for ( i in a ){ if (a[i] > max) { max = a[i]; } }
+    if(width == 0) { width = max; }
     for ( i in a ) {
       printf("%-10s: ", tmp[i] )
       count=int((a[i]*width/max));
-      while ( count != 0) {
-        printf("#");
-        count-=1;
-      }
-      printf("\n")
-    }
-  }')
+      while ( count != 0) { printf("#"); count-=1 }
+      printf("\n") } }')
 fi
 
-echo "$OUTPUT"
+if [ "$OUTPUT" != "" ]; then
+  echo "$OUTPUT"
+fi
 
 exit 0
