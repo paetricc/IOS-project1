@@ -19,16 +19,18 @@ TICKER=""
 OUTPUT=""
 WIDTH=""
 
+GZ_LOG_FILES=""
+LOG_FILES=""
+
 if [ "$1" = "--help" ]; then
   print_help
   exit 0
 fi
 
-
 WIDTH_CHECK=1
-GETPOPTS_CHECK=""
+GETOPTS_CHECK=""
 while getopts "a:b:t:w:h" args; do
-  GETPOPTS_CHECK=" "
+  GETOPTS_CHECK=" "
   case "$args" in
     a)
       AFTER="$OPTARG"
@@ -56,7 +58,7 @@ while getopts "a:b:t:w:h" args; do
       echo "Spatny prepinac"
       exit 1
     ;;
-    : )
+    :)
       echo "Ocekavame soubory na stdin"
     ;;
     *)
@@ -76,16 +78,24 @@ for file in "$@"; do
     COMMAND="$file"
   fi
   if [ "${file##*.}" = "gz" ]; then
-    OUTPUT=$(echo)"${OUTPUT}"$(zcat "$file")
+    GZ_LOG_FILES="$file $GZ_LOG_FILES"
   fi
   if [ "${file##*.}" = "log" ]; then
-    OUTPUT=$(echo)"${OUTPUT}"$(cat "$file")
+    LOG_FILES="$file $LOG_FILES"
   fi
   if [ $counter -ne $# ] && [ -f "$file" ]; then
-    OUTPUT="${OUTPUT}\n"
+    OUTPUT="${OUTPUT}"
   fi
   counter=$((counter+1))
 done
+
+if [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" = "" ]; then
+  OUTPUT=$(cat)
+elif [ "$GZ_LOG_FILES" = "" ] && [ "$LOG_FILES" != "" ]; then
+  OUTPUT=$(cat ${LOG_FILES} | cat)
+elif [ "$GZ_LOG_FILES" != "" ]; then
+  OUTPUT=$(gzip -d -c ${GZ_LOG_FILES} | cat ${LOG_FILES} - | sort)
+fi
 
 #AFTER IS SET
 if [ "$AFTER" != "" ]; then
@@ -99,16 +109,13 @@ fi
 
 #TICKER IS SET
 if [ "$TICKER" != "" ]; then
-  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TICKER="$TICKER" 'BEGIN{n = split(TICKER, tic)} {for(i = 1; i <= n; i++) if($2 == tic[i]) print}')
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TICKER="$TICKER" 'BEGIN{split(TICKER, tic)} {for(i in tic) if($2 == tic[i]) print}')
 fi
 
 #WIDTH IS SET
 if [ "$WIDTH" = "" ]; then
   if [ "$COMMAND" = "hist-ord" ]; then
     WIDTH=0
-  fi
-  if [ "$COMMAND" = "graph-pos" ]; then
-    WIDTH=1000
   fi
 fi
 
@@ -121,12 +128,12 @@ if [ "$COMMAND" = "profit" ]; then
 fi
 
 if [ "$COMMAND" = "last-price" ]; then
-  OUTPUT=$(echo "$OUTPUT" | awk -F ';' '{a[i++]=$0} END {for (j=i-1; j>=0;) print a[j--] }' | awk -F ';' '!seen[$2]++' | awk -F ';' 'BEGIN{i=1} { tmp[i]=$2; a[i++]=$4} END { max = 0; for ( i in a ){ len=length(a[i]); if (len > max) { max = len } } ; for(i in a){ printf("%-10s: %*.2f\n", tmp[i], max, a[i]) }   }' | sort -k1,1)
+  OUTPUT=$(echo "$OUTPUT" | sort -n -r -k1,1 | awk -F ';' '!seen[$2]++' | awk -F ';' 'BEGIN{i=1} { tmp[i]=$2; a[i++]=$4} END { max = 0; for ( i in a ){ len=length(a[i]); if (len > max) { max = len } } ; for(i in a){ printf("%-10s: %*.2f\n", tmp[i], max, a[i]) }   }' | sort -k1,1)
 fi
 
 if [ "$COMMAND" = "pos" ]; then
   TEMP=$(echo "$OUTPUT" | awk -F ';' '{print $2}' | sort -u | awk '{var=var";"$1} END { var=substr(var,2) ;print var}')
-  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TEMP="$TEMP" 'BEGIN{split(TEMP, tmp)} {for(i in tmp) { if($2 == tmp[i]){ if($3 == "buy") { sum[i]+=$6 } else { sum[i]-=$6 } a[i]=$4 } } }
+  OUTPUT=$(echo "$OUTPUT" | sort -n -k1,1 | awk -F ';' -v TEMP="$TEMP" 'BEGIN{split(TEMP, tmp)} {for(i in tmp) { if($2 == tmp[i]){ if($3 == "buy") { sum[i]+=$6 } else { sum[i]-=$6 } a[i]=$4 } } }
   END{
   for(i in tmp) {
     b[i]=sprintf("%.2f", sum[i]*a[i]);
@@ -137,44 +144,68 @@ if [ "$COMMAND" = "pos" ]; then
     }
   }
   for( i in a ){
-    printf("%-10s: %*.2f\n", tmp[i], max, sum[i]*a[i]);
+    printf("%-10s: %*.2f\n", tmp[i], max, b[i]);
   }
 }' | sort -r -n -t ':' -k2)
 fi
 
 if [ "$COMMAND" = "graph-pos" ]; then
   TEMP=$(echo "$OUTPUT" | awk -F ';' '{print $2}' | sort -u | awk '{var=var";"$1} END { var=substr(var,2) ;print var}')
-  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TEMP="$TEMP" -v width="$WIDTH" 'function abs(x){return ((x < 0.0) ? -x : x)} BEGIN{split(TEMP, tmp)}
-  {for(i in tmp) { if( $2 == tmp[i] ) if($2 == tmp[i]){ if($3 == "buy") { sum[i]+=$6 } else { sum[i]-=$6 } a[i]=$4 } } }
+  OUTPUT=$(echo "$OUTPUT" | awk -F ';' -v TEMP="$TEMP" -v width="$WIDTH" 'BEGIN{split(TEMP, tmp)} {for(i in tmp) { if( $2 == tmp[i] ) if($2 == tmp[i]){ if($3 == "buy") { sum[i]+=$6 } else { sum[i]-=$6 } a[i]=$4 } } }
   END{
-    for(i in tmp) {
-      b[i]=sprintf("%.2f", sum[i]*a[i]);
-      absol[i]=sprintf("%.2f", abs(b[i]));
-    }
-    max = 0;
-    for ( i in b ){
-      if (abs(b[i]) > max ) {
-        max = sprintf("%.2f", abs(b[i]));
+  for(i in tmp) {
+    if( (sum[i] * a[i]) < 0 ) {
+        absol[i] = sum[i] * a[i] * (-1.0f);
+      } else {
+        absol[i] = sum[i] *a [i];
       }
     }
-    for ( i in b ) {
-      printf("%-10s: ", tmp[i] )
-      if(b[i]<0) {
-        if( absol[i] == max ) {
-          count=width;
+    max = 0;
+    for ( i in absol ){
+      if (absol[i] > max ) {
+        max = absol[i];
+      }
+    }
+    for ( i in absol ) {
+      printf("%-10s:", tmp[i] )
+      if((sum[i] * a[i])<0) {
+        if ( width != "" ) {
+          if( absol[i] == max ) {
+            count=width;
+            printf(" ");
+          } else {
+            count=int(absol[i]/(max/width));
+            if( count != 0 ) {
+              printf(" ");
+            }
+          }
         } else {
-          count=int(absol[i]/(max/width))
+          count=int(absol[i]/1000);
+          if( count != 0 ) {
+              printf(" ");
+            }
         }
         while ( count != 0 ) {
           printf("!");
           count-=1;
         }
       }
-      if(b[i]>0) {
-        if( absol[i] == max ) {
-          count=width;
+      if((sum[i] * a[i])>0) {
+        if ( width != "" ) {
+          if( absol[i] == max ) {
+            count=width;
+            printf(" ");
+          } else {
+            count=int(absol[i]/(max/width));
+            if( count != 0 ) {
+              printf(" ");
+            }
+          }
         } else {
-          count=int(absol[i]/(max/width))
+          count=int(absol[i]/1000);
+          if( count != 0 ) {
+              printf(" ");
+            }
         }
         while ( count != 0 ) {
           printf("#");
