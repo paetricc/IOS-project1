@@ -55,10 +55,10 @@ WIDTH_CHECK=1
 while getopts ":a:b:t:w:h" args; do
   case "$args" in
     a)
-      AFTER="$OPTARG"
+      AFTER=$(awk -v after="$AFTER" -v optarg="$OPTARG" 'BEGIN{ if(after < optarg) { print optarg } else { print after } }')
     ;;
     b)
-      BEFORE="$OPTARG"
+      BEFORE=$(awk -v before="$BEFORE" -v optarg="$OPTARG" 'BEGIN { if(before > optarg) { print optarg } else { print before } }')
     ;;
     t)
       TICKER="$TICKER$OPTARG;"
